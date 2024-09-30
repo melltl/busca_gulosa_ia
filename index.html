@@ -1,0 +1,281 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Busca Gulosa com Manipulação de Paredes</title>
+    <style>
+      table {
+        border-collapse: collapse;
+        margin: 20px auto;
+      }
+
+      td {
+        width: 50px;
+        height: 50px;
+        border: 1px solid #999;
+        text-align: center;
+        font-weight: bold;
+        position: relative;
+      }
+
+      .col-label,
+      .row-label {
+        background-color: #f0f0f0;
+        font-weight: bold;
+      }
+
+      .cell {
+        cursor: pointer;
+      }
+
+      .wall {
+        background-color: #333;
+      }
+      .start {
+        background-color: #4caf50;
+        color: white;
+      }
+      .goal {
+        background-color: #f44336;
+        color: white;
+      }
+      .path {
+        background-color: #2196f3;
+        color: white;
+      }
+      .visited {
+        background-color: #ffc107;
+      }
+      .choosen_path {
+        background-color: rgb(205, 128, 223);
+      }
+      #butoes {
+        text-align: center;
+      }
+      button {
+        border-radius: 10px;
+        width: 150px;
+      }
+      #output {
+        text-align: center;
+        font-size: 30px;
+        color: #333;
+      }
+    </style>
+  </head>
+  <body>
+    <div id="map"></div>
+    <div id="butoes">
+      <button id="startSearch">Iniciar Busca</button>
+      <button id="resetGrid">Resetar Grid</button>
+      <div>
+        <label>
+          <input type="radio" name="mode" value="start" checked /> Definir
+          Início
+        </label>
+        <label>
+          <input type="radio" name="mode" value="goal" /> Definir Objetivo
+        </label>
+        <label>
+          <input type="radio" name="mode" value="wall" /> Adicionar/Remover
+          Paredes
+        </label>
+      </div>
+      <div id="output"></div>
+    </div>
+
+    <script>
+      let map = [
+      [1,1,1,1,1,1,1,1,1,1,1],
+      [1,0,0,0,0,0,0,0,0,0,1],
+      [1,1,0,1,0,1,1,1,0,1,1],
+      [1,0,0,1,0,0,0,0,0,0,1],
+      [1,0,1,1,0,1,0,1,1,0,1],
+      [1,0,0,0,0,1,0,1,0,0,1],
+      [1,0,0,0,1,1,0,1,0,1,1],
+      [1,0,0,0,0,0,0,1,0,0,1],
+      [1,0,1,1,0,1,1,1,0,1,1],
+      [1,0,0,0,0,0,0,0,0,0,1],
+      [1,1,1,1,1,1,1,1,1,1,1]
+      ];
+
+      let startCoord, goalCoord;
+      const outputDiv = document.getElementById("output");
+
+      // Função para renderizar o mapa como uma tabela
+      function renderMap() {
+        const mapDiv = document.getElementById("map");
+        let table = "<table>";
+        table += "<tr><td></td>";
+        for (let x = 0; x < map[0].length; x++) {
+          table += `<td class="col-label">${x + 1}</td>`;
+        }
+        table += "</tr>";
+        for (let y = 0; y < map.length; y++) {
+          table += `<tr><td class="row-label">${y + 1}</td>`;
+          for (let x = 0; x < map[y].length; x++) {
+            const cellClass = map[y][x] === 1 ? "wall" : "cell";
+            table += `<td class="${cellClass}" id="cell-${x}-${y}" onclick="handleCellClick(${y}, ${x})"></td>`;
+          }
+          table += "</tr>";
+        }
+        table += "</table>";
+        mapDiv.innerHTML = table;
+      }
+
+      renderMap();
+
+      function handleCellClick(i, j) {
+        const mode = document.querySelector('input[name="mode"]:checked').value;
+        const cell = document.getElementById(`cell-${j}-${i}`);
+
+        if (mode === "wall") {
+          toggleWall(i, j, cell);
+        } else if (mode === "start" && map[i][j] !== 1) {
+          setStart(i, j, cell);
+        } else if (mode === "goal" && map[i][j] !== 1) {
+          setGoal(i, j, cell);
+        }
+      }
+
+      function toggleWall(i, j, cell) {
+        if (map[i][j] === 1) {
+          map[i][j] = 0;
+          cell.classList.remove("wall");
+        } else {
+          map[i][j] = 1;
+          cell.classList.add("wall");
+          if (cell.classList.contains("start")) {
+            cell.classList.remove("start");
+            startCoord = null;
+          }
+          if (cell.classList.contains("goal")) {
+            cell.classList.remove("goal");
+            goalCoord = null;
+          }
+        }
+      }
+
+      function setStart(i, j, cell) {
+        if (startCoord) {
+          document
+            .getElementById(`cell-${startCoord[1]}-${startCoord[0]}`)
+            .classList.remove("start");
+        }
+        startCoord = [i, j];
+        cell.classList.add("start");
+      }
+
+      function setGoal(i, j, cell) {
+        if (goalCoord) {
+          document
+            .getElementById(`cell-${goalCoord[1]}-${goalCoord[0]}`)
+            .classList.remove("goal");
+        }
+        goalCoord = [i, j];
+        cell.classList.add("goal");
+      }
+
+      document
+        .getElementById("startSearch")
+        .addEventListener("click", startSearch);
+      document.getElementById("resetGrid").addEventListener("click", resetGrid);
+
+      function resetGrid() {
+        map = map.map((row, i) =>
+          row.map((cell, j) =>
+            i === 0 || i === 10 || j === 0 || j === 10 ? 1 : 0
+          )
+        );
+        startCoord = null;
+        goalCoord = null;
+        renderMap();
+        outputDiv.textContent = "";
+      }
+
+      async function startSearch() {
+        if (!startCoord || !goalCoord) {
+            outputDiv.textContent = "Por favor, defina o ponto de início e o objetivo.";
+            return;
+        }
+
+        const visited = new Set(); // O(1)
+        const queue = [[startCoord]]; // O(1)
+        const costs = new Map(); // O(1)
+        costs.set(startCoord.toString(), 0); // O(1)
+
+        while (queue.length > 0) { // O(n), onde n é o número de células no grid
+            const path = queue.shift(); // O(1)
+            const node = path[path.length - 1]; // O(1)
+            const nodeStr = node.toString(); // O(1)
+
+            if (nodeStr === goalCoord.toString()) { // O(1)
+                await visualizePath(path); // O(p), onde p é o comprimento do caminho
+                outputDiv.textContent = `Caminho encontrado! Custo: ${costs.get(nodeStr)}`;
+                return;
+            }
+
+            if (!visited.has(nodeStr)) { // O(1)
+                visited.add(nodeStr); // O(1)
+                await visualizeNode(node, costs.get(nodeStr)); // O(1)
+
+                for (const neighbor of getNeighbors(node)) { // O(4) no máximo, pois há no máximo 4 vizinhos
+                    const newPath = [...path, neighbor]; // O(p), onde p é o comprimento do caminho
+                    const newCost = costs.get(nodeStr) + 1; // O(1)
+                    costs.set(neighbor.toString(), newCost); // O(1)
+                    queue.push(newPath); // O(1)
+                }
+
+                queue.sort((a, b) => { // O(m log m), onde m é o tamanho da fila
+                    const lastA = a[a.length - 1]; // O(1)
+                    const lastB = b[b.length - 1]; // O(1)
+                    const costA = costs.get(lastA.toString()) + manhattanDistance(lastA, goalCoord); // O(1)
+                    const costB = costs.get(lastB.toString()) + manhattanDistance(lastB, goalCoord); // O(1)
+                    return costA - costB; // O(1)
+                });
+            }
+        }
+
+        outputDiv.textContent = "Nenhum caminho encontrado!";
+    }
+
+    function manhattanDistance(a, b) {
+        return Math.abs(a[0] - b[0]) + Math.abs(a[1] - b[1]); // O(1)
+    }
+
+    function getNeighbors(node) {
+        const [x, y] = node; // O(1)
+        const neighbors = []; // O(1)
+        [[0, 1], [1, 0], [0, -1], [-1, 0]].forEach(([dx, dy]) => { // O(4)
+            const newX = x + dx, newY = y + dy; // O(1)
+            if (newX >= 0 && newX < 11 && newY >= 0 && newY < 11 && map[newX][newY] === 0) { // O(1)
+                neighbors.push([newX, newY]); // O(1)
+            }
+        });
+        return neighbors; // O(1)
+    }
+
+    async function visualizeNode(node, cost) {
+        const cell = document.getElementById(`cell-${node[1]}-${node[0]}`); // O(1)
+        if (!cell.classList.contains("start") && !cell.classList.contains("goal")) { // O(1)
+            cell.classList.add("visited"); // O(1)
+            cell.textContent = cost.toFixed(1); // O(1)
+        }
+        await new Promise((resolve) => setTimeout(resolve, 100)); // O(1), mas adiciona 100ms de atraso
+    }
+
+    async function visualizePath(path) {
+        for (const node of path) { // O(p), onde p é o comprimento do caminho
+            const cell = document.getElementById(`cell-${node[1]}-${node[0]}`); // O(1)
+            if (!cell.classList.contains("start") && !cell.classList.contains("goal")) { // O(1)
+                cell.classList.add("path"); // O(1)
+                cell.style.backgroundColor = "rgb(205, 128, 223)"; // O(1)
+            }
+            await new Promise((resolve) => setTimeout(resolve, 100)); // O(1), mas adiciona 100ms de atraso
+        }
+    }
+
+    </script>
+  </body>
+</html>
