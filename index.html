@@ -1,281 +1,178 @@
 <!DOCTYPE html>
-<html lang="pt-BR">
-  <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Busca Gulosa com Manipulação de Paredes</title>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Greedy Search Grid Visualization</title>
     <style>
-      table {
-        border-collapse: collapse;
-        margin: 20px auto;
-      }
-
-      td {
-        width: 50px;
-        height: 50px;
-        border: 1px solid #999;
-        text-align: center;
-        font-weight: bold;
-        position: relative;
-      }
-
-      .col-label,
-      .row-label {
-        background-color: #f0f0f0;
-        font-weight: bold;
-      }
-
-      .cell {
-        cursor: pointer;
-      }
-
-      .wall {
-        background-color: #333;
-      }
-      .start {
-        background-color: #4caf50;
-        color: white;
-      }
-      .goal {
-        background-color: #f44336;
-        color: white;
-      }
-      .path {
-        background-color: #2196f3;
-        color: white;
-      }
-      .visited {
-        background-color: #ffc107;
-      }
-      .choosen_path {
-        background-color: rgb(205, 128, 223);
-      }
-      #butoes {
-        text-align: center;
-      }
-      button {
-        border-radius: 10px;
-        width: 150px;
-      }
-      #output {
-        text-align: center;
-        font-size: 30px;
-        color: #333;
-      }
+        body {
+            font-family: Arial, sans-serif;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            margin: 0;
+            background-color: #f0f0f0;
+        }
+        .container {
+            text-align: center;
+        }
+        #grid {
+            display: grid;
+            grid-template-columns: repeat(11, 30px);
+            gap: 1px;
+            margin-bottom: 20px;
+        }
+        .cell {
+            width: 30px;
+            height: 30px;
+            border: 1px solid #ccc;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            cursor: pointer;
+            font-size: 10px; /* Reduzido para caber no quadrado */
+            text-align: center;
+        }
+        .wall { background-color: #333; }
+        .start { background-color: #4CAF50; }
+        .end { background-color: #F44336; }
+        .path { background-color: #2196F3; }
+        .visited { background-color: #FFC107; }
+        button {
+            margin: 5px;
+            padding: 5px 10px;
+        }
     </style>
-  </head>
-  <body>
-    <div id="map"></div>
-    <div id="butoes">
-      <button id="startSearch">Iniciar Busca</button>
-      <button id="resetGrid">Resetar Grid</button>
-      <div>
-        <label>
-          <input type="radio" name="mode" value="start" checked /> Definir
-          Início
-        </label>
-        <label>
-          <input type="radio" name="mode" value="goal" /> Definir Objetivo
-        </label>
-        <label>
-          <input type="radio" name="mode" value="wall" /> Adicionar/Remover
-          Paredes
-        </label>
-      </div>
-      <div id="output"></div>
+</head>
+<body>
+    <div class="container">
+        <h1>Greedy Search Grid Visualization</h1>
+        <div id="grid"></div>
+        <div>
+            <button id="setStart">Set Start</button>
+            <button id="setEnd">Set End</button>
+            <button id="toggleWall">Toggle Wall</button>
+            <button id="startSearch">Start Search</button>
+            <button id="reset">Reset</button>
+        </div>
     </div>
-
     <script>
-      let map = [
-      [1,1,1,1,1,1,1,1,1,1,1],
-      [1,0,0,0,0,0,0,0,0,0,1],
-      [1,1,0,1,0,1,1,1,0,1,1],
-      [1,0,0,1,0,0,0,0,0,0,1],
-      [1,0,1,1,0,1,0,1,1,0,1],
-      [1,0,0,0,0,1,0,1,0,0,1],
-      [1,0,0,0,1,1,0,1,0,1,1],
-      [1,0,0,0,0,0,0,1,0,0,1],
-      [1,0,1,1,0,1,1,1,0,1,1],
-      [1,0,0,0,0,0,0,0,0,0,1],
-      [1,1,1,1,1,1,1,1,1,1,1]
-      ];
+        const grid = document.getElementById('grid');
+        const cells = [];
+        let start = null;
+        let end = null;
+        let currentMode = 'wall';
 
-      let startCoord, goalCoord;
-      const outputDiv = document.getElementById("output");
-
-      // Função para renderizar o mapa como uma tabela
-      function renderMap() {
-        const mapDiv = document.getElementById("map");
-        let table = "<table>";
-        table += "<tr><td></td>";
-        for (let x = 0; x < map[0].length; x++) {
-          table += `<td class="col-label">${x + 1}</td>`;
-        }
-        table += "</tr>";
-        for (let y = 0; y < map.length; y++) {
-          table += `<tr><td class="row-label">${y + 1}</td>`;
-          for (let x = 0; x < map[y].length; x++) {
-            const cellClass = map[y][x] === 1 ? "wall" : "cell";
-            table += `<td class="${cellClass}" id="cell-${x}-${y}" onclick="handleCellClick(${y}, ${x})"></td>`;
-          }
-          table += "</tr>";
-        }
-        table += "</table>";
-        mapDiv.innerHTML = table;
-      }
-
-      renderMap();
-
-      function handleCellClick(i, j) {
-        const mode = document.querySelector('input[name="mode"]:checked').value;
-        const cell = document.getElementById(`cell-${j}-${i}`);
-
-        if (mode === "wall") {
-          toggleWall(i, j, cell);
-        } else if (mode === "start" && map[i][j] !== 1) {
-          setStart(i, j, cell);
-        } else if (mode === "goal" && map[i][j] !== 1) {
-          setGoal(i, j, cell);
-        }
-      }
-
-      function toggleWall(i, j, cell) {
-        if (map[i][j] === 1) {
-          map[i][j] = 0;
-          cell.classList.remove("wall");
-        } else {
-          map[i][j] = 1;
-          cell.classList.add("wall");
-          if (cell.classList.contains("start")) {
-            cell.classList.remove("start");
-            startCoord = null;
-          }
-          if (cell.classList.contains("goal")) {
-            cell.classList.remove("goal");
-            goalCoord = null;
-          }
-        }
-      }
-
-      function setStart(i, j, cell) {
-        if (startCoord) {
-          document
-            .getElementById(`cell-${startCoord[1]}-${startCoord[0]}`)
-            .classList.remove("start");
-        }
-        startCoord = [i, j];
-        cell.classList.add("start");
-      }
-
-      function setGoal(i, j, cell) {
-        if (goalCoord) {
-          document
-            .getElementById(`cell-${goalCoord[1]}-${goalCoord[0]}`)
-            .classList.remove("goal");
-        }
-        goalCoord = [i, j];
-        cell.classList.add("goal");
-      }
-
-      document
-        .getElementById("startSearch")
-        .addEventListener("click", startSearch);
-      document.getElementById("resetGrid").addEventListener("click", resetGrid);
-
-      function resetGrid() {
-        map = map.map((row, i) =>
-          row.map((cell, j) =>
-            i === 0 || i === 10 || j === 0 || j === 10 ? 1 : 0
-          )
-        );
-        startCoord = null;
-        goalCoord = null;
-        renderMap();
-        outputDiv.textContent = "";
-      }
-
-      async function startSearch() {
-        if (!startCoord || !goalCoord) {
-            outputDiv.textContent = "Por favor, defina o ponto de início e o objetivo.";
-            return;
+        // Create grid
+        for (let y = 0; y < 11; y++) {
+            for (let x = 0; x < 11; x++) {
+                const cell = document.createElement('div');
+                cell.className = 'cell';
+                cell.dataset.x = x;
+                cell.dataset.y = y;
+                cell.addEventListener('click', () => handleCellClick(x, y));
+                grid.appendChild(cell);
+                cells.push(cell);
+            }
         }
 
-        const visited = new Set(); // O(1)
-        const queue = [[startCoord]]; // O(1)
-        const costs = new Map(); // O(1)
-        costs.set(startCoord.toString(), 0); // O(1)
+        function handleCellClick(x, y) {
+            const cell = cells[y * 11 + x];
+            if (currentMode === 'wall') {
+                cell.classList.toggle('wall');
+            } else if (currentMode === 'start' && !start) {
+                start = {x, y};
+                cell.classList.add('start');
+            } else if (currentMode === 'end' && !end) {
+                end = {x, y};
+                cell.classList.add('end');
+            }
+        }
 
-        while (queue.length > 0) { // O(n), onde n é o número de células no grid
-            const path = queue.shift(); // O(1)
-            const node = path[path.length - 1]; // O(1)
-            const nodeStr = node.toString(); // O(1)
+        document.getElementById('setStart').addEventListener('click', () => currentMode = 'start');
+        document.getElementById('setEnd').addEventListener('click', () => currentMode = 'end');
+        document.getElementById('toggleWall').addEventListener('click', () => currentMode = 'wall');
+        document.getElementById('startSearch').addEventListener('click', startSearch);
+        document.getElementById('reset').addEventListener('click', resetGrid);
 
-            if (nodeStr === goalCoord.toString()) { // O(1)
-                await visualizePath(path); // O(p), onde p é o comprimento do caminho
-                outputDiv.textContent = `Caminho encontrado! Custo: ${costs.get(nodeStr)}`;
+        function resetGrid() {
+            cells.forEach(cell => {
+                cell.className = 'cell';
+                cell.innerText = ''; // Clear any text (cost values)
+            });
+            start = null;
+            end = null;
+        }
+
+        function heuristic(a, b) {
+            return Math.sqrt(Math.pow(a.x - b.x, 2) + Math.pow(a.y - b.y, 2));
+        }
+
+        function getNeighbors(x, y) {
+            const neighbors = [];
+            const directions = [[0, 1], [1, 0], [0, -1], [-1, 0]];
+            for (const [dx, dy] of directions) {
+                const newX = x + dx;
+                const newY = y + dy;
+                if (newX >= 0 && newX < 11 && newY >= 0 && newY < 11) {
+                    const cell = cells[newY * 11 + newX];
+                    if (!cell.classList.contains('wall')) {
+                        neighbors.push({x: newX, y: newY});
+                    }
+                }
+            }
+            return neighbors;
+        }
+
+        async function startSearch() {
+            if (!start || !end) {
+                alert('Please set start and end points');
                 return;
             }
 
-            if (!visited.has(nodeStr)) { // O(1)
-                visited.add(nodeStr); // O(1)
-                await visualizeNode(node, costs.get(nodeStr)); // O(1)
+            const frontier = [{node: start, priority: heuristic(start, end)}];
+            const cameFrom = new Map();
+            const visited = new Set();
 
-                for (const neighbor of getNeighbors(node)) { // O(4) no máximo, pois há no máximo 4 vizinhos
-                    const newPath = [...path, neighbor]; // O(p), onde p é o comprimento do caminho
-                    const newCost = costs.get(nodeStr) + 1; // O(1)
-                    costs.set(neighbor.toString(), newCost); // O(1)
-                    queue.push(newPath); // O(1)
+            while (frontier.length > 0) {
+                frontier.sort((a, b) => a.priority - b.priority);
+                const current = frontier.shift().node;
+                
+                if (current.x === end.x && current.y === end.y) {
+                    break;
                 }
 
-                queue.sort((a, b) => { // O(m log m), onde m é o tamanho da fila
-                    const lastA = a[a.length - 1]; // O(1)
-                    const lastB = b[b.length - 1]; // O(1)
-                    const costA = costs.get(lastA.toString()) + manhattanDistance(lastA, goalCoord); // O(1)
-                    const costB = costs.get(lastB.toString()) + manhattanDistance(lastB, goalCoord); // O(1)
-                    return costA - costB; // O(1)
-                });
+                for (const next of getNeighbors(current.x, current.y)) {
+                    const key = `${next.x},${next.y}`;
+                    if (!visited.has(key)) {
+                        visited.add(key);
+                        cameFrom.set(key, current);
+                        frontier.push({node: next, priority: heuristic(next, end)});
+                        if (!(next.x === end.x && next.y === end.y) && !(next.x === start.x && next.y === start.y)) {
+                            cells[next.y * 11 + next.x].classList.add('visited');
+
+                            // Calculate and display the cost (distance from end)
+                            const cost = heuristic(end, next).toFixed(2);
+                            cells[next.y * 11 + next.x].innerText = cost;
+                        }
+                        await new Promise(resolve => setTimeout(resolve, 50));
+                    }
+                }
+            }
+
+            // Reconstruct path
+            let current = end;
+            while (current.x !== start.x || current.y !== start.y) {
+                const key = `${current.x},${current.y}`;
+                current = cameFrom.get(key);
+                if (!(current.x === start.x && current.y === start.y) && !(current.x === end.x && current.y === end.y)) {
+                    cells[current.y * 11 + current.x].classList.remove('visited');
+                    cells[current.y * 11 + current.x].classList.add('path');
+                }
+                await new Promise(resolve => setTimeout(resolve, 50));
             }
         }
-
-        outputDiv.textContent = "Nenhum caminho encontrado!";
-    }
-
-    function manhattanDistance(a, b) {
-        return Math.abs(a[0] - b[0]) + Math.abs(a[1] - b[1]); // O(1)
-    }
-
-    function getNeighbors(node) {
-        const [x, y] = node; // O(1)
-        const neighbors = []; // O(1)
-        [[0, 1], [1, 0], [0, -1], [-1, 0]].forEach(([dx, dy]) => { // O(4)
-            const newX = x + dx, newY = y + dy; // O(1)
-            if (newX >= 0 && newX < 11 && newY >= 0 && newY < 11 && map[newX][newY] === 0) { // O(1)
-                neighbors.push([newX, newY]); // O(1)
-            }
-        });
-        return neighbors; // O(1)
-    }
-
-    async function visualizeNode(node, cost) {
-        const cell = document.getElementById(`cell-${node[1]}-${node[0]}`); // O(1)
-        if (!cell.classList.contains("start") && !cell.classList.contains("goal")) { // O(1)
-            cell.classList.add("visited"); // O(1)
-            cell.textContent = cost.toFixed(1); // O(1)
-        }
-        await new Promise((resolve) => setTimeout(resolve, 100)); // O(1), mas adiciona 100ms de atraso
-    }
-
-    async function visualizePath(path) {
-        for (const node of path) { // O(p), onde p é o comprimento do caminho
-            const cell = document.getElementById(`cell-${node[1]}-${node[0]}`); // O(1)
-            if (!cell.classList.contains("start") && !cell.classList.contains("goal")) { // O(1)
-                cell.classList.add("path"); // O(1)
-                cell.style.backgroundColor = "rgb(205, 128, 223)"; // O(1)
-            }
-            await new Promise((resolve) => setTimeout(resolve, 100)); // O(1), mas adiciona 100ms de atraso
-        }
-    }
-
     </script>
-  </body>
+</body>
 </html>
