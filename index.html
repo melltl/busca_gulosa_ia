@@ -1,178 +1,335 @@
 <!DOCTYPE html>
 <html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Greedy Search Grid Visualization</title>
     <style>
-        body {
-            font-family: Arial, sans-serif;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            height: 100vh;
-            margin: 0;
-            background-color: #f0f0f0;
-        }
-        .container {
-            text-align: center;
-        }
-        #grid {
-            display: grid;
-            grid-template-columns: repeat(11, 30px);
-            gap: 1px;
-            margin-bottom: 20px;
-        }
-        .cell {
-            width: 30px;
-            height: 30px;
-            border: 1px solid #ccc;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            cursor: pointer;
-            font-size: 10px; /* Reduzido para caber no quadrado */
-            text-align: center;
-        }
-        .wall { background-color: #333; }
-        .start { background-color: #4CAF50; }
-        .end { background-color: #F44336; }
-        .path { background-color: #2196F3; }
-        .visited { background-color: #FFC107; }
-        button {
-            margin: 5px;
-            padding: 5px 10px;
-        }
+      body {
+        font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        min-height: 100vh;
+        margin: 0;
+        background-color: #f0f4f8;
+        color: #333;
+      }
+      .container {
+        background-color: white;
+        border-radius: 10px;
+        box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        padding: 2rem;
+        text-align: center;
+      }
+      h1 {
+        color: #2c3e50;
+        margin-bottom: 1.5rem;
+      }
+      #grid {
+        display: grid;
+        grid-template-columns: repeat(11, 35px);
+        gap: 2px;
+        margin-bottom: 1.5rem;
+        background-color: #ecf0f1;
+        padding: 10px;
+        border-radius: 5px;
+      }
+      .cell {
+        width: 35px;
+        height: 35px;
+        border: 1px solid #bdc3c7;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        cursor: pointer;
+        font-size: 10px;
+        text-align: center;
+        transition: all 0.3s ease;
+        border-radius: 3px;
+      }
+      .wall {
+        background-color: #34495e;
+      }
+      .start {
+        background-color: #2ecc71;
+      }
+      .end {
+        background-color: #e74c3c;
+      }
+      .path {
+        background-color: #3498db;
+      }
+      .visited {
+        background-color: #f1c40f;
+      }
+      .controls {
+        display: flex;
+        justify-content: center;
+        flex-wrap: wrap;
+        gap: 10px;
+        margin-bottom: 1.5rem;
+      }
+      button {
+        padding: 8px 16px;
+        border: none;
+        border-radius: 4px;
+        background-color: #3498db;
+        color: white;
+        cursor: pointer;
+        transition: background-color 0.3s ease;
+      }
+      button:hover {
+        background-color: #2980b9;
+      }
+      #lineCount {
+        margin-top: 1.5rem;
+        font-weight: bold;
+        color: #2c3e50;
+        font-size: 1.1em;
+      }
     </style>
-</head>
-<body>
+  </head>
+  <body>
     <div class="container">
-        <h1>Greedy Search Grid Visualization</h1>
-        <div id="grid"></div>
-        <div>
-            <button id="setStart">Set Start</button>
-            <button id="setEnd">Set End</button>
-            <button id="toggleWall">Toggle Wall</button>
-            <button id="startSearch">Start Search</button>
-            <button id="reset">Reset</button>
-        </div>
+      <h1>Greedy Search Grid Visualization</h1>
+      <div id="grid"></div>
+      <div class="controls">
+        <button id="setStart">Set Start</button>
+        <button id="setEnd">Set End</button>
+        <button id="toggleWall">Toggle Wall</button>
+        <button id="startSearch">Start Search</button>
+        <button id="reset">Reset</button>
+      </div>
+      <div id="lineCount"></div>
     </div>
     <script>
-        const grid = document.getElementById('grid');
-        const cells = [];
-        let start = null;
-        let end = null;
-        let currentMode = 'wall';
+      const grid = document.getElementById("grid");
+      const cells = [];
+      let start = null;
+      let end = null;
+      let currentMode = "wall";
+      let lineCount = 0;
 
-        // Create grid
-        for (let y = 0; y < 11; y++) {
-            for (let x = 0; x < 11; x++) {
-                const cell = document.createElement('div');
-                cell.className = 'cell';
-                cell.dataset.x = x;
-                cell.dataset.y = y;
-                cell.addEventListener('click', () => handleCellClick(x, y));
-                grid.appendChild(cell);
-                cells.push(cell);
+      // Predefined map
+      let map = [
+        [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1],
+        [1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1],
+        [1, 1, 0, 1, 0, 1, 1, 1, 0, 1, 1],
+        [1, 0, 0, 1, 0, 0, 0, 0, 0, 0, 1],
+        [1, 0, 1, 1, 0, 1, 0, 1, 1, 0, 1],
+        [1, 0, 0, 0, 0, 1, 0, 1, 0, 0, 1],
+        [1, 0, 0, 0, 1, 1, 0, 1, 0, 1, 1],
+        [1, 0, 0, 0, 0, 0, 0, 1, 0, 0, 1],
+        [1, 0, 1, 1, 0, 1, 1, 1, 0, 1, 1],
+        [1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1],
+        [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1],
+      ];
+
+      // Create grid
+      for (let y = 0; y < 11; y++) {
+        for (let x = 0; x < 11; x++) {
+          const cell = document.createElement("div");
+          cell.className = "cell";
+          cell.dataset.x = x;
+          cell.dataset.y = y;
+          cell.addEventListener("click", () => handleCellClick(x, y));
+          grid.appendChild(cell);
+          cells.push(cell);
+
+          // Add predefined walls
+          if (map[y][x] === 1) {
+            cell.classList.add("wall");
+          }
+        }
+      }
+
+      function handleCellClick(x, y) {
+        const cell = cells[y * 11 + x];
+        if (currentMode === "wall") {
+          cell.classList.toggle("wall");
+          map[y][x] = cell.classList.contains("wall") ? 1 : 0;
+        } else if (currentMode === "start" && !start) {
+          start = { x, y };
+          cell.classList.add("start");
+        } else if (currentMode === "end" && !end) {
+          end = { x, y };
+          cell.classList.add("end");
+        }
+      }
+
+      document
+        .getElementById("setStart")
+        .addEventListener("click", () => (currentMode = "start"));
+      document
+        .getElementById("setEnd")
+        .addEventListener("click", () => (currentMode = "end"));
+      document
+        .getElementById("toggleWall")
+        .addEventListener("click", () => (currentMode = "wall"));
+      document
+        .getElementById("startSearch")
+        .addEventListener("click", startSearch);
+      document.getElementById("reset").addEventListener("click", resetGrid);
+
+      function resetGrid() {
+        cells.forEach((cell, index) => {
+          const x = index % 11;
+          const y = Math.floor(index / 11);
+          cell.className = "cell";
+          cell.innerText = "";
+          // Restore predefined walls
+          if (map[y][x] === 1) {
+            cell.classList.add("wall");
+          }
+        });
+        start = null;
+        end = null;
+        lineCount = 0;
+        updateLineCount();
+      }
+
+      // Função que calcula a distância estimada (heurística) entre dois pontos
+      function heuristic(a, b) {
+        // Incrementa a contagem de linhas executadas
+        lineCount += 1; // O(1)
+        // Calcula e retorna a distância euclidiana entre os pontos 'a' e 'b'
+        // Usa o teorema de Pitágoras: √((x2-x1)² + (y2-y1)²)
+        return Math.sqrt(Math.pow(a.x - b.x, 2) + Math.pow(a.y - b.y, 2)); // O(1)
+      }
+
+      // Função que encontra os vizinhos válidos de uma célula no grid
+      function getNeighbors(x, y) {
+        // Inicializa um array vazio para armazenar os vizinhos
+        const neighbors = []; // O(1)
+        // Define as quatro direções possíveis: direita, baixo, esquerda, cima
+        const directions = [
+          [0, 1],
+          [1, 0],
+          [0, -1],
+          [-1, 0],
+        ]; // O(1)
+        // Incrementa a contagem de linhas executadas (2 linhas acima)
+        lineCount += 2; // O(1)
+
+        // Itera sobre cada direção possível
+        for (const [dx, dy] of directions) {
+          // O(1) - sempre 4 iterações
+          // Incrementa a contagem de linhas executadas para cada iteração
+          lineCount += 1; // O(1)
+          // Calcula as coordenadas do possível vizinho
+          const newX = x + dx; // O(1)
+          const newY = y + dy; // O(1)
+
+          // Verifica se as novas coordenadas estão dentro dos limites do grid (11x11)
+          if (newX >= 0 && newX < 11 && newY >= 0 && newY < 11) {
+            // O(1)
+            // Verifica se a célula não é uma parede (0 representa espaço livre no mapa)
+            if (map[newY][newX] === 0) {
+              // O(1)
+              // Adiciona o vizinho válido ao array de vizinhos
+              neighbors.push({ x: newX, y: newY }); // O(1)
             }
+          }
         }
 
-        function handleCellClick(x, y) {
-            const cell = cells[y * 11 + x];
-            if (currentMode === 'wall') {
-                cell.classList.toggle('wall');
-            } else if (currentMode === 'start' && !start) {
-                start = {x, y};
-                cell.classList.add('start');
-            } else if (currentMode === 'end' && !end) {
-                end = {x, y};
-                cell.classList.add('end');
+        // Incrementa a contagem de linhas executadas (para a linha de retorno)
+        lineCount += 1; // O(1)
+        // Retorna o array de vizinhos válidos
+        return neighbors; // O(1)
+      }
+
+      async function startSearch() {
+        // Verifica se os pontos de início e fim foram definidos
+        if (!start || !end) {
+          alert("Please set start and end points");
+          return;
+        }
+        // Reinicia a contagem de linhas executadas
+        lineCount = 0; // O(1)
+
+        // Inicializa a fronteira com o nó inicial e sua prioridade (distância estimada até o fim)
+        const frontier = [{ node: start, priority: heuristic(start, end) }]; // O(1)
+        // Cria um mapa para rastrear o caminho (de onde cada nó veio)
+        const cameFrom = new Map(); // O(1)
+        // Cria um conjunto para manter os nós já visitados
+        const visited = new Set(); // O(1)
+
+        // Continua enquanto houver nós na fronteira para explorar
+        while (frontier.length > 0) {
+          // O(n), onde n é o número de nós explorados
+          // Incrementa a contagem de linhas executadas
+          lineCount += 1; // O(1)
+          // Ordena a fronteira pela prioridade (menor primeiro)
+          frontier.sort((a, b) => a.priority - b.priority); // O(n log n)
+          // Remove e seleciona o nó com menor prioridade
+          const current = frontier.shift().node; // O(1)
+
+          // Se o nó atual é o destino, termina a busca
+          if (current.x === end.x && current.y === end.y) {
+            // O(1)
+            break;
+          }
+
+          // Explora os vizinhos do nó atual
+          for (const next of getNeighbors(current.x, current.y)) {
+            // O(1) - número fixo de vizinhos
+            // Incrementa a contagem de linhas executadas
+            lineCount += 1; // O(1)
+            // Cria uma chave única para o nó
+            const key = `${next.x},${next.y}`; // O(1)
+            // Se o nó não foi visitado ainda
+            if (!visited.has(key)) {
+              // O(1)
+              // Marca o nó como visitado
+              visited.add(key); // O(1)
+              // Registra de onde este nó veio
+              cameFrom.set(key, current); // O(1)
+              // Adiciona o nó à fronteira com sua prioridade
+              frontier.push({ node: next, priority: heuristic(next, end) }); // O(1)
+              // Se não for o início ou fim, marca como visitado visualmente
+              if (
+                !(next.x === end.x && next.y === end.y) &&
+                !(next.x === start.x && next.y === start.y)
+              ) {
+                // O(1)
+                cells[next.y * 11 + next.x].classList.add("visited"); // O(1)
+                // Calcula e exibe o custo (distância do fim)
+                const cost = heuristic(end, next).toFixed(2); // O(1)
+                cells[next.y * 11 + next.x].innerText = cost; // O(1)
+              }
+              // Pausa para permitir a visualização da animação
+              await new Promise((resolve) => setTimeout(resolve, 50)); // O(1)
             }
+          }
         }
 
-        document.getElementById('setStart').addEventListener('click', () => currentMode = 'start');
-        document.getElementById('setEnd').addEventListener('click', () => currentMode = 'end');
-        document.getElementById('toggleWall').addEventListener('click', () => currentMode = 'wall');
-        document.getElementById('startSearch').addEventListener('click', startSearch);
-        document.getElementById('reset').addEventListener('click', resetGrid);
-
-        function resetGrid() {
-            cells.forEach(cell => {
-                cell.className = 'cell';
-                cell.innerText = ''; // Clear any text (cost values)
-            });
-            start = null;
-            end = null;
+        // Reconstrói e visualiza o caminho encontrado
+        let current = end; // O(1)
+        while (current && (current.x !== start.x || current.y !== start.y)) {
+          // O(p), onde p é o comprimento do caminho
+          // Incrementa a contagem de linhas executadas
+          lineCount += 1; // O(1)
+          // Cria uma chave única para o nó atual
+          const key = `${current.x},${current.y}`; // O(1)
+          // Move para o nó de onde este veio
+          current = cameFrom.get(key); // O(1)
+          // Se não for o início ou fim, marca como parte do caminho
+          if (
+            current &&
+            !(current.x === start.x && current.y === start.y) &&
+            !(current.x === end.x && current.y === end.y)
+          ) {
+            // O(1)
+            cells[current.y * 11 + current.x].classList.remove("visited"); // O(1)
+            cells[current.y * 11 + current.x].classList.add("path"); // O(1)
+          }
+          // Pausa para permitir a visualização da animação
+          await new Promise((resolve) => setTimeout(resolve, 50)); // O(1)
         }
-
-        function heuristic(a, b) {
-            return Math.sqrt(Math.pow(a.x - b.x, 2) + Math.pow(a.y - b.y, 2));
-        }
-
-        function getNeighbors(x, y) {
-            const neighbors = [];
-            const directions = [[0, 1], [1, 0], [0, -1], [-1, 0]];
-            for (const [dx, dy] of directions) {
-                const newX = x + dx;
-                const newY = y + dy;
-                if (newX >= 0 && newX < 11 && newY >= 0 && newY < 11) {
-                    const cell = cells[newY * 11 + newX];
-                    if (!cell.classList.contains('wall')) {
-                        neighbors.push({x: newX, y: newY});
-                    }
-                }
-            }
-            return neighbors;
-        }
-
-        async function startSearch() {
-            if (!start || !end) {
-                alert('Please set start and end points');
-                return;
-            }
-
-            const frontier = [{node: start, priority: heuristic(start, end)}];
-            const cameFrom = new Map();
-            const visited = new Set();
-
-            while (frontier.length > 0) {
-                frontier.sort((a, b) => a.priority - b.priority);
-                const current = frontier.shift().node;
-                
-                if (current.x === end.x && current.y === end.y) {
-                    break;
-                }
-
-                for (const next of getNeighbors(current.x, current.y)) {
-                    const key = `${next.x},${next.y}`;
-                    if (!visited.has(key)) {
-                        visited.add(key);
-                        cameFrom.set(key, current);
-                        frontier.push({node: next, priority: heuristic(next, end)});
-                        if (!(next.x === end.x && next.y === end.y) && !(next.x === start.x && next.y === start.y)) {
-                            cells[next.y * 11 + next.x].classList.add('visited');
-
-                            // Calculate and display the cost (distance from end)
-                            const cost = heuristic(end, next).toFixed(2);
-                            cells[next.y * 11 + next.x].innerText = cost;
-                        }
-                        await new Promise(resolve => setTimeout(resolve, 50));
-                    }
-                }
-            }
-
-            // Reconstruct path
-            let current = end;
-            while (current.x !== start.x || current.y !== start.y) {
-                const key = `${current.x},${current.y}`;
-                current = cameFrom.get(key);
-                if (!(current.x === start.x && current.y === start.y) && !(current.x === end.x && current.y === end.y)) {
-                    cells[current.y * 11 + current.x].classList.remove('visited');
-                    cells[current.y * 11 + current.x].classList.add('path');
-                }
-                await new Promise(resolve => setTimeout(resolve, 50));
-            }
-        }
+        // Atualiza a contagem de linhas exibida
+        updateLineCount(); // O(1)
+      }
     </script>
-</body>
+  </body>
 </html>
