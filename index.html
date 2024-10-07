@@ -172,6 +172,11 @@
         .addEventListener("click", startSearch);
       document.getElementById("reset").addEventListener("click", resetGrid);
 
+      function updateLineCount() {
+        const lineCountElement = document.getElementById("lineCount");
+        lineCountElement.textContent = `Linhas executadas: ${lineCount}`;
+      }
+
       function resetGrid() {
         cells.forEach((cell, index) => {
           const x = index % 11;
